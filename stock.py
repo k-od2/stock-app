@@ -1,7 +1,11 @@
 import streamlit as st
 import sqlite3
 import os
+import os
 
+# 強制リセット（開発用）
+if os.path.exists("stock.db"):
+    os.remove("stock.db")
 if os.path.exists("stock.db"):
     os.remove("stock.db")
     
