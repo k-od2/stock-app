@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS history (
     name TEXT,
     change_qty INTEGER,
     type TEXT,
+    user TEXT,
     date TEXT
 )
 """)
@@ -52,14 +53,19 @@ if os.path.exists("data.csv") and not os.path.exists("initialized.flag"):
 st.title("在庫管理アプリ")
 
 # =========================
-# 🔍 検索（メイン）
+# 👤 使用者入力
+# =========================
+user = st.text_input("使用者名（必須）")
+
+# =========================
+# 🔍 検索・使用
 # =========================
 st.header("検索・使用")
 
 name_query = st.text_input("商品名検索（例：s3）")
 type_query = st.selectbox("型選択（任意）", ["", "P", "S", "G"])
-search_inner = st.text_input("内径(mm) ※任意")
-search_thick = st.text_input("線径(mm) ※任意")
+search_inner = st.text_input("内径(mm)")
+search_thick = st.text_input("線径(mm)")
 
 c.execute("SELECT * FROM stock")
 rows = c.fetchall()
@@ -67,7 +73,6 @@ rows = c.fetchall()
 def normalize(text):
     return text.lower().replace("-", "").replace(" ", "")
 
-# ===== フィルタ =====
 result = []
 
 for r in rows:
@@ -145,7 +150,9 @@ if result:
     use_qty = st.number_input("使用数", min_value=1, value=1)
 
     if st.button("使用する"):
-        if selected[4] < use_qty:
+        if not user:
+            st.error("使用者名を入力してください")
+        elif selected[4] < use_qty:
             st.error("在庫不足")
         else:
             new_qty = selected[4] - use_qty
@@ -156,8 +163,8 @@ if result:
             )
 
             c.execute(
-                "INSERT INTO history (name, change_qty, type, date) VALUES (?, ?, ?, ?)",
-                (selected[1], -use_qty, "use", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                "INSERT INTO history (name, change_qty, type, user, date) VALUES (?, ?, ?, ?, ?)",
+                (selected[1], -use_qty, "use", user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             )
 
             conn.commit()
@@ -168,12 +175,9 @@ else:
     st.warning("該当なし")
 
 # =========================
-# ➕ 商品追加（完全版）
+# ➕ 商品追加
 # =========================
 st.header("商品追加")
-
-def normalize(text):
-    return text.lower().replace("-", "").replace(" ", "")
 
 name = st.text_input("商品名（例：s31a）", key="add_name")
 
@@ -188,7 +192,6 @@ if name:
             existing = item
             break
 
-# ===== UI分岐 =====
 if name:
 
     # ===== 既存 =====
@@ -198,32 +201,37 @@ if name:
         qty = st.number_input("追加数", min_value=1, value=1, key="add_qty_exist")
 
         if st.button("在庫に追加"):
-            new_qty = existing[4] + qty
+            if not user:
+                st.error("使用者名を入力してください")
+            else:
+                new_qty = existing[4] + qty
 
-            c.execute(
-                "UPDATE stock SET quantity=? WHERE id=?",
-                (new_qty, existing[0])
-            )
+                c.execute(
+                    "UPDATE stock SET quantity=? WHERE id=?",
+                    (new_qty, existing[0])
+                )
 
-            c.execute(
-                "INSERT INTO history (name, change_qty, type, date) VALUES (?, ?, ?, ?)",
-                (existing[1], qty, "add", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            )
+                c.execute(
+                    "INSERT INTO history (name, change_qty, type, user, date) VALUES (?, ?, ?, ?, ?)",
+                    (existing[1], qty, "add", user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                )
 
-            conn.commit()
-            st.success("在庫を追加しました")
-            st.rerun()
+                conn.commit()
+                st.success("在庫を追加しました")
+                st.rerun()
 
     # ===== 新規 =====
     else:
-        st.warning("新規商品です → 寸法を入力してください")
+        st.warning("新規商品です → 寸法入力")
 
         inner = st.number_input("内径(mm)", key="new_inner")
         thickness = st.number_input("線径(mm)", key="new_thick")
         qty = st.number_input("初期在庫", min_value=1, value=1, key="new_qty")
 
         if st.button("新規登録"):
-            if inner == 0 or thickness == 0:
+            if not user:
+                st.error("使用者名を入力してください")
+            elif inner == 0 or thickness == 0:
                 st.error("内径・線径は必須")
             else:
                 c.execute(
@@ -232,13 +240,14 @@ if name:
                 )
 
                 c.execute(
-                    "INSERT INTO history (name, change_qty, type, date) VALUES (?, ?, ?, ?)",
-                    (name, qty, "add", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                    "INSERT INTO history (name, change_qty, type, user, date) VALUES (?, ?, ?, ?, ?)",
+                    (name, qty, "add", user, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
                 )
 
                 conn.commit()
                 st.success("新規追加しました")
                 st.rerun()
+
 # =========================
 # 📜 履歴
 # =========================
@@ -249,9 +258,9 @@ history = c.fetchall()
 
 for h in history:
     if h[3] == "use":
-        st.write(f"{h[4]} | {h[1]} を {abs(h[2])}個使用")
+        st.write(f"{h[5]} | {h[4]} が {h[1]} を {abs(h[2])}個使用")
     else:
-        st.write(f"{h[4]} | {h[1]} を {h[2]}個追加")
+        st.write(f"{h[5]} | {h[4]} が {h[1]} を {h[2]}個追加")
 
 c.execute("SELECT * FROM history ORDER BY date DESC")
 history = c.fetchall()
