@@ -18,6 +18,8 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS stock (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
+    inner REAL,
+    thickness REAL,
     quantity INTEGER
 )
 """)
