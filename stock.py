@@ -23,7 +23,8 @@ c.execute("""
 CREATE TABLE IF NOT EXISTS history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT,
-    used_qty INTEGER,
+    change_qty INTEGER,
+    type TEXT,
     date TEXT
 )
 """)
@@ -75,15 +76,12 @@ for r in rows:
     thick_match = True
     type_match = True
 
-    # 商品名
     if name_query:
         name_match = normalize(name_query) in normalize(r[1])
 
-    # 型
     if type_query:
         type_match = r[1].upper().startswith(type_query)
 
-    # 内径
     if search_inner:
         try:
             inner_val = float(search_inner)
@@ -91,7 +89,6 @@ for r in rows:
         except:
             inner_match = False
 
-    # 線径
     if search_thick:
         try:
             thick_val = float(search_thick)
@@ -99,7 +96,6 @@ for r in rows:
         except:
             thick_match = False
 
-    # 条件
     if search_inner and search_thick:
         if name_match and type_match and inner_match and thick_match:
             result.append(r)
@@ -127,42 +123,25 @@ if result:
     result.sort(key=calc_distance)
 
     def format_item(x):
-        name = x[1]
-        stock = x[4]
-        inner_val = x[2]
-        thick_val = x[3]
-
-        text = f"{name}（在庫:{stock}）"
+        text = f"{x[1]}（在庫:{x[4]}）"
 
         if search_inner:
             try:
-                diff_inner = inner_val - float(search_inner)
-                text += f" | 内径:{inner_val}mm ({diff_inner:+.2f})"
+                diff = x[2] - float(search_inner)
+                text += f" | 内径:{x[2]}mm ({diff:+.2f})"
             except:
                 pass
 
         if search_thick:
             try:
-                diff_thick = thick_val - float(search_thick)
-                text += f" | 線径:{thick_val}mm ({diff_thick:+.2f})"
+                diff = x[3] - float(search_thick)
+                text += f" | 線径:{x[3]}mm ({diff:+.2f})"
             except:
                 pass
 
-        try:
-            if search_inner and search_thick:
-                if diff_inner == 0 and diff_thick == 0:
-                    text = "★ " + text
-        except:
-            pass
-
         return text
 
-    selected = st.selectbox(
-        "商品選択",
-        result,
-        format_func=format_item
-    )
-
+    selected = st.selectbox("商品選択", result, format_func=format_item)
     use_qty = st.number_input("使用数", min_value=1, value=1)
 
     if st.button("使用する"):
@@ -176,20 +155,20 @@ if result:
                 (new_qty, selected[0])
             )
 
-            # 履歴
             c.execute(
-                "INSERT INTO history (name, used_qty, date) VALUES (?, ?, ?)",
-                (selected[1], use_qty, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+                "INSERT INTO history (name, change_qty, type, date) VALUES (?, ?, ?, ?)",
+                (selected[1], -use_qty, "use", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
             )
 
             conn.commit()
             st.success("在庫更新完了")
             st.rerun()
+
 else:
     st.warning("該当なし")
 
 # =========================
-# ➕ 商品追加（サブ）
+# ➕ 商品追加
 # =========================
 st.header("商品追加")
 
@@ -199,23 +178,58 @@ thickness = st.number_input("線径(mm)", key="add_thick")
 qty = st.number_input("在庫数", min_value=0, key="add_qty")
 
 if st.button("追加"):
-    c.execute(
-        "INSERT INTO stock (name, inner, thickness, quantity) VALUES (?, ?, ?, ?)",
-        (name, inner, thickness, qty)
-    )
+
+    c.execute("SELECT * FROM stock WHERE name=?", (name,))
+    existing = c.fetchone()
+
+    if existing:
+        # 加算
+        new_qty = existing[4] + qty
+
+        c.execute(
+            "UPDATE stock SET quantity=? WHERE id=?",
+            (new_qty, existing[0])
+        )
+
+        c.execute(
+            "INSERT INTO history (name, change_qty, type, date) VALUES (?, ?, ?, ?)",
+            (name, qty, "add", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+        )
+
+        st.success("在庫に加算しました")
+
+    else:
+        if inner == 0 or thickness == 0:
+            st.error("新規は内径・線径必須")
+        else:
+            c.execute(
+                "INSERT INTO stock (name, inner, thickness, quantity) VALUES (?, ?, ?, ?)",
+                (name, inner, thickness, qty)
+            )
+
+            c.execute(
+                "INSERT INTO history (name, change_qty, type, date) VALUES (?, ?, ?, ?)",
+                (name, qty, "add", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            )
+
+            st.success("新規追加しました")
+
     conn.commit()
-    st.success("追加完了")
+    st.rerun()
 
 # =========================
 # 📜 履歴
 # =========================
-st.header("使用履歴")
+st.header("履歴")
 
 c.execute("SELECT * FROM history ORDER BY date DESC")
 history = c.fetchall()
 
 for h in history:
-    st.write(f"{h[3]} | {h[1]} を {h[2]}個使用")
+    if h[3] == "use":
+        st.write(f"{h[4]} | {h[1]} を {abs(h[2])}個使用")
+    else:
+        st.write(f"{h[4]} | {h[1]} を {h[2]}個追加")
 
 c.execute("SELECT * FROM history ORDER BY date DESC")
 history = c.fetchall()
