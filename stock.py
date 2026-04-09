@@ -50,30 +50,12 @@ if os.path.exists("data.csv") and not os.path.exists("initialized.flag"):
 st.title("在庫管理アプリ")
 
 # =========================
-# 商品追加
+# 🔍 検索（メイン）
 # =========================
-st.subheader("商品追加")
+st.header("検索・使用")
 
-name = st.text_input("商品名")
-inner = st.number_input("内径(mm)")
-thickness = st.number_input("線径(mm)")
-qty = st.number_input("在庫数", min_value=0)
-
-if st.button("追加"):
-    c.execute(
-        "INSERT INTO stock (name, inner, thickness, quantity) VALUES (?, ?, ?, ?)",
-        (name, inner, thickness, qty)
-    )
-    conn.commit()
-    st.success("追加完了")
-
-# =========================
-# 検索
-# =========================
-st.subheader("検索")
-
-search_inner = st.number_input("内径検索", key="s_inner")
-search_thick = st.number_input("線径検索", key="s_thick")
+search_inner = st.number_input("内径(mm)")
+search_thick = st.number_input("線径(mm)")
 
 c.execute("SELECT * FROM stock")
 rows = c.fetchall()
@@ -92,20 +74,12 @@ if not result:
         and abs(r[3] - search_thick) <= 0.5
     ]
 
-st.write("検索結果", result)
+if result:
+    st.write("候補")
 
-# =========================
-# 在庫使用
-# =========================
-st.subheader("在庫使用")
-
-c.execute("SELECT * FROM stock")
-items = c.fetchall()
-
-if items:
     selected = st.selectbox(
         "商品選択",
-        items,
+        result,
         format_func=lambda x: f"{x[1]}（在庫:{x[4]}）"
     )
 
@@ -131,10 +105,31 @@ if items:
             conn.commit()
             st.success("在庫更新完了")
 
+else:
+    st.warning("該当なし（±0.5mmもなし）")
+
 # =========================
-# 履歴表示
+# ➕ 商品追加（サブ）
 # =========================
-st.subheader("使用履歴")
+st.header("商品追加")
+
+name = st.text_input("商品名", key="add_name")
+inner = st.number_input("内径(mm)", key="add_inner")
+thickness = st.number_input("線径(mm)", key="add_thick")
+qty = st.number_input("在庫数", min_value=0, key="add_qty")
+
+if st.button("追加"):
+    c.execute(
+        "INSERT INTO stock (name, inner, thickness, quantity) VALUES (?, ?, ?, ?)",
+        (name, inner, thickness, qty)
+    )
+    conn.commit()
+    st.success("追加完了")
+
+# =========================
+# 📜 履歴
+# =========================
+st.header("使用履歴")
 
 c.execute("SELECT * FROM history ORDER BY date DESC")
 history = c.fetchall()
