@@ -4,6 +4,10 @@ import pandas as pd
 import os
 from datetime import datetime
 
+# ===== 初回だけDBリセット（1回実行したら消す！）=====
+# if os.path.exists("stock.db"):
+#     os.remove("stock.db")
+
 # ===== DB接続 =====
 conn = sqlite3.connect("stock.db", check_same_thread=False)
 c = conn.cursor()
@@ -53,7 +57,7 @@ if os.path.exists("data.csv") and not os.path.exists("initialized.flag"):
 st.title("在庫管理アプリ")
 
 # =========================
-# 👤 使用者入力
+# 👤 使用者
 # =========================
 user = st.text_input("使用者名（必須）")
 
