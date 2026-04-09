@@ -3,10 +3,7 @@ import sqlite3
 import pandas as pd
 import os
 from datetime import datetime
-
-# ===== DBリセット（開発中だけ）=====
-if os.path.exists("stock.db"):
-    os.remove("stock.db")
+    
 
 # ===== DB接続 =====
 conn = sqlite3.connect("stock.db", check_same_thread=False)
