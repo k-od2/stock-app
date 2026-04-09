@@ -76,11 +76,11 @@ for r in rows:
     inner_match = True
     thick_match = True
 
-    # 商品名検索
+    # 商品名
     if name_query:
         name_match = normalize(name_query) in normalize(r[1])
 
-    # 内径検索（入力あれば）
+    # 内径（±0.5）
     if search_inner:
         try:
             inner_val = float(search_inner)
@@ -88,7 +88,7 @@ for r in rows:
         except:
             inner_match = False
 
-    # 線径検索（入力あれば）
+    # 線径（±0.5）
     if search_thick:
         try:
             thick_val = float(search_thick)
@@ -96,9 +96,9 @@ for r in rows:
         except:
             thick_match = False
 
-    if name_match and inner_match and thick_match:
+    # 👇ここが重要
+    if name_match and (inner_match or thick_match):
         result.append(r)
-
 # ===== 表示 =====
 if result:
 
