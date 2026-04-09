@@ -101,10 +101,64 @@ for r in rows:
 
 # ===== 表示 =====
 if result:
+
+    # ===== 並び替え（近い順）=====
+    def calc_distance(x):
+        d = 0
+        if search_inner:
+            try:
+                d += abs(x[2] - float(search_inner))
+            except:
+                pass
+        if search_thick:
+            try:
+                d += abs(x[3] - float(search_thick))
+            except:
+                pass
+        return d
+
+    result.sort(key=calc_distance)
+
+    # ===== 表示フォーマット =====
+    def format_item(x):
+        name = x[1]
+        stock = x[4]
+        inner_val = x[2]
+        thick_val = x[3]
+
+        text = f"{name}（在庫:{stock}）"
+
+        # 内径差分
+        if search_inner:
+            try:
+                diff_inner = inner_val - float(search_inner)
+                text += f" | 内径:{inner_val}mm ({diff_inner:+.2f})"
+            except:
+                pass
+
+        # 線径差分
+        if search_thick:
+            try:
+                diff_thick = thick_val - float(search_thick)
+                text += f" | 線径:{thick_val}mm ({diff_thick:+.2f})"
+            except:
+                pass
+
+        # 完全一致なら★
+        try:
+            if search_inner and search_thick:
+                if diff_inner == 0 and diff_thick == 0:
+                    text = "★ " + text
+        except:
+            pass
+
+        return text
+
+    # ===== 選択 =====
     selected = st.selectbox(
         "商品選択",
         result,
-        format_func=lambda x: f"{x[1]}（在庫:{x[4]}）"
+        format_func=format_item
     )
 
     use_qty = st.number_input("使用数", min_value=1, value=1)
@@ -125,6 +179,8 @@ if result:
 
 else:
     st.warning("該当なし")
+    st.warning("該当なし")
+
 
 # =========================
 # ➕ 商品追加（サブ）
