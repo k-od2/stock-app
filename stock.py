@@ -3,10 +3,11 @@ import sqlite3
 import pandas as pd
 import os
 from datetime import datetime
-
+if os.path.exists("initialized.flag"):
+    os.remove("initialized.flag")
 # ===== 初回だけDBリセット（1回実行したら消す！）=====
-if os.path.exists("stock.db"):
-    os.remove("stock.db")
+#if os.path.exists("stock.db"):
+    #os.remove("stock.db")
 
 # ===== DB接続 =====
 conn = sqlite3.connect("stock.db", check_same_thread=False)
