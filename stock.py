@@ -5,8 +5,8 @@ import os
 from datetime import datetime
 
 # ===== 初回だけDBリセット（1回実行したら消す！）=====
- #if os.path.exists("stock.db"):
-    #os.remove("stock.db")
+ if os.path.exists("stock.db"):
+    os.remove("stock.db")
 
 # ===== DB接続 =====
 conn = sqlite3.connect("stock.db", check_same_thread=False)
@@ -261,13 +261,13 @@ c.execute("SELECT * FROM history ORDER BY date DESC")
 history = c.fetchall()
 
 for h in history:
-    if h[3] == "use":
-        st.write(f"{h[5]} | {h[4]} が {h[1]} を {abs(h[2])}個使用")
-    else:
-        st.write(f"{h[5]} | {h[4]} が {h[1]} を {h[2]}個追加")
+    name = h[1]
+    qty = h[2]
+    type_ = h[3]
+    user_ = h[4]
+    date_ = h[5]
 
-c.execute("SELECT * FROM history ORDER BY date DESC")
-history = c.fetchall()
-
-for h in history:
-    st.write(f"{h[3]} | {h[1]} を {h[2]}個使用")
+    if type_ == "use":
+        st.write(f"{date_} | {user_} が {name} を {abs(qty)}個使用")
+    elif type_ == "add":
+        st.write(f"{date_} | {user_} が {name} を {qty}個追加")
