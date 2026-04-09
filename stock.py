@@ -30,9 +30,8 @@ CREATE TABLE IF NOT EXISTS history (
 """)
 
 conn.commit()
-
-# ===== CSV初期読み込み =====
-if os.path.exists("data.csv"):
+# ===== CSV初期読み込み（1回だけ）=====
+if os.path.exists("data.csv") and not os.path.exists("initialized.flag"):
     df = pd.read_csv("data.csv")
 
     for _, row in df.iterrows():
@@ -43,6 +42,10 @@ if os.path.exists("data.csv"):
 
     conn.commit()
 
+    with open("initialized.flag", "w") as f:
+        f.write("done")
+
+    st.success("初期データ読み込み完了")
 # ===== UI =====
 st.title("在庫管理アプリ")
 
