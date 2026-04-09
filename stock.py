@@ -54,29 +54,53 @@ st.title("在庫管理アプリ")
 # =========================
 st.header("検索・使用")
 
-search_inner = st.number_input("内径(mm)")
-search_thick = st.number_input("線径(mm)")
+# ===== 商品名検索 =====
+name_query = st.text_input("商品名検索（例：s3）")
+
+# ===== 寸法検索（任意）=====
+search_inner = st.text_input("内径(mm) ※任意")
+search_thick = st.text_input("線径(mm) ※任意")
 
 c.execute("SELECT * FROM stock")
 rows = c.fetchall()
 
-# 完全一致
-result = [
-    r for r in rows
-    if r[2] == search_inner and r[3] == search_thick
-]
+# ===== 正規化関数（超重要）=====
+def normalize(text):
+    return text.lower().replace("-", "").replace(" ", "")
 
-# なければ ±0.5
-if not result:
-    result = [
-        r for r in rows
-        if abs(r[2] - search_inner) <= 0.5
-        and abs(r[3] - search_thick) <= 0.5
-    ]
+# ===== フィルタ =====
+result = []
 
+for r in rows:
+    name_match = True
+    inner_match = True
+    thick_match = True
+
+    # 商品名検索
+    if name_query:
+        name_match = normalize(name_query) in normalize(r[1])
+
+    # 内径検索（入力あれば）
+    if search_inner:
+        try:
+            inner_val = float(search_inner)
+            inner_match = abs(r[2] - inner_val) <= 0.5
+        except:
+            inner_match = False
+
+    # 線径検索（入力あれば）
+    if search_thick:
+        try:
+            thick_val = float(search_thick)
+            thick_match = abs(r[3] - thick_val) <= 0.5
+        except:
+            thick_match = False
+
+    if name_match and inner_match and thick_match:
+        result.append(r)
+
+# ===== 表示 =====
 if result:
-    st.write("候補")
-
     selected = st.selectbox(
         "商品選択",
         result,
@@ -96,17 +120,11 @@ if result:
                 (new_qty, selected[0])
             )
 
-            # 履歴保存
-            c.execute(
-                "INSERT INTO history (name, used_qty, date) VALUES (?, ?, ?)",
-                (selected[1], use_qty, datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
-            )
-
             conn.commit()
             st.success("在庫更新完了")
 
 else:
-    st.warning("該当なし（±0.5mmもなし）")
+    st.warning("該当なし")
 
 # =========================
 # ➕ 商品追加（サブ）
