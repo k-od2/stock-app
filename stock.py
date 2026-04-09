@@ -168,15 +168,14 @@ else:
     st.warning("該当なし")
 
 # =========================
-# ➕ 商品追加（改良版）
+# ➕ 商品追加（完全版）
 # =========================
 st.header("商品追加")
 
 def normalize(text):
     return text.lower().replace("-", "").replace(" ", "")
 
-name = st.text_input("商品名（例：s3 1a）", key="add_name")
-qty = st.number_input("追加数", min_value=1, value=1, key="add_qty")
+name = st.text_input("商品名（例：s31a）", key="add_name")
 
 existing = None
 
@@ -185,15 +184,18 @@ if name:
     all_items = c.fetchall()
 
     for item in all_items:
-        if normalize(item[1]) == normalize(name):
+        if normalize(name) in normalize(item[1]):
             existing = item
             break
 
-# ===== 分岐 =====
+# ===== UI分岐 =====
 if name:
 
+    # ===== 既存 =====
     if existing:
-        st.info(f"既存商品です → 現在在庫: {existing[4]}")
+        st.success(f"既存商品：{existing[1]}（在庫:{existing[4]}）")
+
+        qty = st.number_input("追加数", min_value=1, value=1, key="add_qty_exist")
 
         if st.button("在庫に追加"):
             new_qty = existing[4] + qty
@@ -212,11 +214,13 @@ if name:
             st.success("在庫を追加しました")
             st.rerun()
 
+    # ===== 新規 =====
     else:
-        st.warning("新規商品です → 寸法入力してください")
+        st.warning("新規商品です → 寸法を入力してください")
 
         inner = st.number_input("内径(mm)", key="new_inner")
         thickness = st.number_input("線径(mm)", key="new_thick")
+        qty = st.number_input("初期在庫", min_value=1, value=1, key="new_qty")
 
         if st.button("新規登録"):
             if inner == 0 or thickness == 0:
