@@ -184,7 +184,7 @@ if result:
 
             conn.commit()
             st.success("在庫更新完了")
-
+            st.rerun()
 else:
     st.warning("該当なし")
 
