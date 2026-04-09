@@ -5,8 +5,8 @@ import os
 from datetime import datetime
 
 # ===== 初回だけDBリセット（1回実行したら消す！）=====
-# if os.path.exists("stock.db"):
-#     os.remove("stock.db")
+ if os.path.exists("stock.db"):
+    os.remove("stock.db")
 
 # ===== DB接続 =====
 conn = sqlite3.connect("stock.db", check_same_thread=False)
