@@ -142,35 +142,34 @@ for r in rows:
         result.append(r)
         seen.add(key)
 # ===== 表示 =====
-def calc_distance(x):
-    d = 0
+if result:
 
-    # 内径
-    if search_inner:
-        try:
-            d += abs(x[2] - float(search_inner))
-        except:
-            pass
+    def calc_distance(x):
+        d = 0
 
-    # 線径
-    if search_thick:
-        try:
-            d += abs(x[3] - float(search_thick))
-        except:
-            pass
+        if search_inner:
+            try:
+                d += abs(x[2] - float(search_inner))
+            except:
+                pass
 
-    # 👇 これ追加（名前の数字距離）
-    if name_query:
-        import re
-        q_num = re.findall(r'\d+', name_query)
-        x_num = re.findall(r'\d+', x[1])
+        if search_thick:
+            try:
+                d += abs(x[3] - float(search_thick))
+            except:
+                pass
 
-        if q_num and x_num:
-            d += abs(int(q_num[0]) - int(x_num[0]))
+        if name_query:
+            import re
+            q_num = re.findall(r'\d+', name_query)
+            x_num = re.findall(r'\d+', x[1])
+            if q_num and x_num:
+                d += abs(int(q_num[0]) - int(x_num[0]))
 
-    return d
+        return d
 
-result.sort(key=calc_distance)
+    result.sort(key=calc_distance)
+
     def format_item(x):
         text = f"{x[1]}（在庫:{x[4]}）"
 
