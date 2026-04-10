@@ -80,18 +80,40 @@ def normalize(text):
 
 result = []
 
+import re
+
+result = []
+seen = set()
+
 for r in rows:
+    name = r[1]
+
     name_match = True
     inner_match = True
     thick_match = True
     type_match = True
 
-    if name_query:
-        name_match = normalize(name_query) in normalize(r[1])
-
+    # ===== 型（P,S,G）=====
     if type_query:
-        type_match = r[1].upper().startswith(type_query)
+        type_match = name.upper().startswith(type_query)
 
+    # ===== 商品名検索（ここ改良）=====
+    if name_query:
+        q = normalize(name_query)
+
+        # 数字抽出（s5 → 5）
+        q_num = re.findall(r'\d+', q)
+
+        name_norm = normalize(name)
+        name_num = re.findall(r'\d+', name_norm)
+
+        # 型 + 数字一致のみ
+        if q_num:
+            name_match = (q_num[0] == name_num[0] if name_num else False)
+        else:
+            name_match = q in name_norm
+
+    # ===== 内径 =====
     if search_inner:
         try:
             inner_val = float(search_inner)
@@ -99,6 +121,7 @@ for r in rows:
         except:
             inner_match = False
 
+    # ===== 線径 =====
     if search_thick:
         try:
             thick_val = float(search_thick)
@@ -106,32 +129,48 @@ for r in rows:
         except:
             thick_match = False
 
+    # ===== 条件 =====
     if search_inner and search_thick:
-        if name_match and type_match and inner_match and thick_match:
-            result.append(r)
+        ok = name_match and type_match and inner_match and thick_match
     else:
-        if name_match and type_match and (inner_match or thick_match):
-            result.append(r)
+        ok = name_match and type_match and (inner_match or thick_match)
 
+    # ===== 重複排除 =====
+    key = (r[1], r[2], r[3])  # name, inner, thickness
+
+    if ok and key not in seen:
+        result.append(r)
+        seen.add(key)
 # ===== 表示 =====
-if result:
+def calc_distance(x):
+    d = 0
 
-    def calc_distance(x):
-        d = 0
-        if search_inner:
-            try:
-                d += abs(x[2] - float(search_inner))
-            except:
-                pass
-        if search_thick:
-            try:
-                d += abs(x[3] - float(search_thick))
-            except:
-                pass
-        return d
+    # 内径
+    if search_inner:
+        try:
+            d += abs(x[2] - float(search_inner))
+        except:
+            pass
 
-    result.sort(key=calc_distance)
+    # 線径
+    if search_thick:
+        try:
+            d += abs(x[3] - float(search_thick))
+        except:
+            pass
 
+    # 👇 これ追加（名前の数字距離）
+    if name_query:
+        import re
+        q_num = re.findall(r'\d+', name_query)
+        x_num = re.findall(r'\d+', x[1])
+
+        if q_num and x_num:
+            d += abs(int(q_num[0]) - int(x_num[0]))
+
+    return d
+
+result.sort(key=calc_distance)
     def format_item(x):
         text = f"{x[1]}（在庫:{x[4]}）"
 
